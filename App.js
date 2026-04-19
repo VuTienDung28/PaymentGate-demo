@@ -1,20 +1,28 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import React from "react"
+import { NavigationContainer } from "@react-navigation/native"
+import { createNativeStackNavigator } from "@react-navigation/native-stack"
+import AuthScreen from "./frontend/src/screens/AuthScreen"
+import HomeScreen from "./frontend/src/screens/HomeScreen"
+import PaymentScreen from "./frontend/src/screens/PaymentScreen"
+
+// Tạo bộ điều hướng Stack
+const Stack = createNativeStackNavigator()
 
 export default function App() {
   return (
-    <View style={styles.container}>
-      <Text>Open up App.js to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
-  );
-}
+    <NavigationContainer>
+      <Stack.Navigator
+        initialRouteName='Auth'
+        screenOptions={{ headerShown: false }} // Ẩn thanh tiêu đề mặc định để dùng giao diện Cinema của bạn
+      >
+        {/* Màn hình Đăng nhập/Đăng ký */}
+        <Stack.Screen name='Auth' component={AuthScreen} />
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
+        {/* Màn hình Trang chủ */}
+        <Stack.Screen name='Home' component={HomeScreen} />
+
+        <Stack.Screen name='Payment' component={PaymentScreen} />
+      </Stack.Navigator>
+    </NavigationContainer>
+  )
+}
