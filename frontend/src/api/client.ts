@@ -1,6 +1,5 @@
 import axios from "axios"
 
-// Đừng quên thay IP này thành IPv4 của máy tính bạn
 const BASE_URL = "http://192.168.0.101:5270/api"
 
 const apiClient = axios.create({
@@ -10,8 +9,5 @@ const apiClient = axios.create({
     "Content-Type": "application/json",
   },
 })
-
-// Bạn có thể thêm Interceptors ở đây sau này để tự động chèn JWT Token
-// apiClient.interceptors.request.use(...)
 
 export default apiClient

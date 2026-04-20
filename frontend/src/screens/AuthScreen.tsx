@@ -34,22 +34,19 @@ export default function AuthScreen({ navigation }: any) {
   const [confirmPassword, setConfirmPassword] = useState("")
 
   const [isLoading, setIsLoading] = useState(false)
-  // Hàm xử lý luồng điều hướng khi bấm nút
+
   const handleAuthAction = async () => {
     if (isLoginMode) {
-      // --- LUỒNG ĐĂNG NHẬP THẬT ---
-
-      // Kiểm tra xem người dùng đã nhập đủ thông tin chưa
       if (!email || !password) {
         Alert.alert("Lỗi", "Vui lòng nhập Email và Mật khẩu!")
         return
       }
 
-      setIsLoading(true) // Bật hiệu ứng loading
+      setIsLoading(true)
       try {
         console.log("Bắt đầu ping thẳng tới Backend...")
         const testRes = await fetch(
-          "http://192.168.0.107:5270/api/Auth/login",
+          "http://192.168.0.101:5270/api/Auth/login",
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -65,7 +62,6 @@ export default function AuthScreen({ navigation }: any) {
         // Gọi API lên ASP.NET Core
         const response = await authApi.login(email, password)
 
-        // In ra Terminal của Expo để bạn xem Backend trả về cái gì (Token, UserInfo...)
         console.log("Dữ liệu BE trả về:", response)
 
         // Thành công -> Chuyển sang Home
@@ -77,12 +73,11 @@ export default function AuthScreen({ navigation }: any) {
         )
         console.error("Lỗi đăng nhập:", error)
 
-        // Bóc tách câu báo lỗi từ ASP.NET trả về (nếu có)
         const errorMsg =
           error.response?.data?.message || "Sai tài khoản hoặc mật khẩu!"
         Alert.alert("Đăng nhập thất bại", errorMsg)
       } finally {
-        setIsLoading(false) // Tắt hiệu ứng loading
+        setIsLoading(false)
       }
     } else {
       // 1. Kiểm tra các trường không được bỏ trống

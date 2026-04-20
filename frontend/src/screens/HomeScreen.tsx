@@ -1,4 +1,4 @@
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
 import {
   View,
   Text,
@@ -13,7 +13,7 @@ import {
 } from "react-native"
 import * as ImagePicker from "expo-image-picker"
 import { mediaApi } from "../api/mediaApi"
-import { orderApi } from "../api/orderApi" // <-- Import API Đặt hàng
+import { orderApi } from "../api/orderApi"
 
 const COLORS = {
   primary: "#E88B00",
@@ -23,19 +23,49 @@ const COLORS = {
   textSecondary: "#6B7280",
 }
 
-const TICKET_PRICE = 100000 // Giả lập giá 1 vé = 100.000 VNĐ
+const TICKET_PRICE = 100000
 
 export default function HomeScreen({ navigation }: any) {
-  const [moviePosters, setMoviePosters] = useState<string[]>([
-    "https://m.media-amazon.com/images/M/MV5BMTc5MDE2ODcwNV5BMl5BanBnXkFtZTgwMzI2NzQ2NzM@._V1_FMjpg_UX1000_.jpg",
-  ])
+  // Mảng rỗng chờ data từ API
+  const [moviePosters, setMoviePosters] = useState<string[]>([])
   const [isUploading, setIsUploading] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
 
   // --- STATE CHO MODAL ĐẶT VÉ ---
   const [isModalVisible, setModalVisible] = useState(false)
   const [selectedMovieIndex, setSelectedMovieIndex] = useState(0)
   const [ticketQuantity, setTicketQuantity] = useState(1)
   const [isOrdering, setIsOrdering] = useState(false)
+
+  // Hàm chuẩn hóa URL
+  const formatUrl = (url: string) => {
+    if (!url) return ""
+    return url
+      .replace("localhost", " 192.168.0.101")
+      .replace("127.0.0.1", " 192.168.0.101")
+  }
+
+  // --- LẤY DANH SÁCH ẢNH TỪ DATABASE ---
+  const fetchImages = async () => {
+    try {
+      const data = await mediaApi.getImages()
+      // Lọc và format URL từ danh sách trả về
+      const urls = data.map((item: any) =>
+        formatUrl(item.fileUrl || item.FileUrl),
+      )
+      setMoviePosters(urls)
+    } catch (error) {
+      console.error("Lỗi tải danh sách ảnh:", error)
+      // Tùy chọn: Thêm 1 ảnh mặc định nếu lỗi mạng để app không bị trống
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Tự động gọi fetchImages khi màn hình được render lần đầu
+  useEffect(() => {
+    fetchImages()
+  }, [])
 
   const handleLogout = () => {
     Alert.alert("Đăng xuất", "Bạn có chắc muốn thoát?", [
@@ -48,6 +78,7 @@ export default function HomeScreen({ navigation }: any) {
     ])
   }
 
+  // --- UPLOAD ẢNH ---
   const handleUploadMovie = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
@@ -65,13 +96,13 @@ export default function HomeScreen({ navigation }: any) {
 
         const data = await mediaApi.uploadImage(imageUri, filename, type)
         let finalUrl = data.url || data.Url
+
         if (finalUrl) {
-          finalUrl = finalUrl
-            .replace("localhost", "192.168.0.107")
-            .replace("127.0.0.1", "192.168.0.107")
+          finalUrl = formatUrl(finalUrl)
+          // Thêm ảnh mới vào đầu danh sách đang hiển thị
+          setMoviePosters((prev) => [finalUrl, ...prev])
+          Alert.alert("Thành công", "Đã tải Poster phim lên hệ thống!")
         }
-        setMoviePosters((prev) => [finalUrl, ...prev])
-        Alert.alert("Thành công", "Đã tải Poster phim lên MinIO!")
       } catch (error) {
         Alert.alert("Lỗi", "Không thể tải ảnh lên máy chủ.")
       } finally {
@@ -99,9 +130,9 @@ export default function HomeScreen({ navigation }: any) {
 
       // CHUYỂN SANG TRANG THANH TOÁN
       navigation.navigate("Payment", {
-        orderId: response.data.orderId,
+        orderId: response.data.orderId || response.data.OrderId,
         amount: ticketQuantity * TICKET_PRICE,
-        signature: response.data.signature,
+        signature: response.data.signature || response.data.Signature,
       })
     } catch (error) {
       Alert.alert("Lỗi", "Không thể tạo đơn hàng.")
@@ -109,6 +140,7 @@ export default function HomeScreen({ navigation }: any) {
       setIsOrdering(false)
     }
   }
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -143,20 +175,29 @@ export default function HomeScreen({ navigation }: any) {
 
         <Text style={styles.sectionTitle}>Trending Today</Text>
 
-        <View style={styles.moviesGrid}>
-          {moviePosters.map((url, index) => (
-            <TouchableOpacity
-              key={index}
-              style={styles.movieCard}
-              onPress={() => openBookingModal(index)} // <-- Bấm vào ảnh mở Modal
-            >
-              <Image source={{ uri: url }} style={styles.movieImage} />
-              <View style={styles.movieOverlay}>
-                <Text style={styles.bookText}>Bấm để đặt vé</Text>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </View>
+        {/* HIỂN THỊ LOADING HOẶC DANH SÁCH ẢNH */}
+        {isLoading ? (
+          <ActivityIndicator
+            size='large'
+            color={COLORS.primary}
+            style={{ marginTop: 50 }}
+          />
+        ) : (
+          <View style={styles.moviesGrid}>
+            {moviePosters.map((url, index) => (
+              <TouchableOpacity
+                key={index}
+                style={styles.movieCard}
+                onPress={() => openBookingModal(index)}
+              >
+                <Image source={{ uri: url }} style={styles.movieImage} />
+                <View style={styles.movieOverlay}>
+                  <Text style={styles.bookText}>Bấm để đặt vé</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
       </ScrollView>
 
       {/* --- MODAL CHỌN SỐ LƯỢNG VÉ (BOTTOM SHEET) --- */}

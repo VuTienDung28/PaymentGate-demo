@@ -1,33 +1,94 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Business_be.Data;
+using Business_be.Models;
+using Business_be.Services;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
-using Business_be.Services;
 
-[Route("api/[controller]")]
-[ApiController]
-public class MediaController : ControllerBase
+namespace Business_be.Controllers
 {
-    private readonly MinioService _minioService;
-    public MediaController(MinioService minioService) => _minioService = minioService;
-
-    [HttpPost("upload")]
-    public async Task<IActionResult> Upload(IFormFile file)
+    [Route("api/[controller]")]
+    [ApiController]
+    public class MediaController : ControllerBase
     {
-        if (file == null) return BadRequest("File trống");
+        private readonly IMinIOService _storageService;
+        private readonly AppDbContext _context;
 
-        var newFileName = $"{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
-        using var memoryStream = new MemoryStream();
-
-        // ImageSharp xử lý: Đọc -> Resize -> Ghi vào MemoryStream
-        using (var image = await Image.LoadAsync(file.OpenReadStream()))
+        public MediaController(IMinIOService storageService, AppDbContext context)
         {
-            image.Mutate(x => x.Resize(800, 0)); // Resize chiều ngang về 800px, cao tự động
-            await image.SaveAsJpegAsync(memoryStream);
+            _storageService = storageService;
+            _context = context;
         }
 
-        memoryStream.Position = 0; // Reset con trỏ stream về đầu trước khi upload
-        var url = await _minioService.UploadFileAsync(memoryStream, newFileName, "image/jpeg");
+        [HttpPost("upload")]
+        public async Task<IActionResult> Upload(IFormFile file)
+        {
+            try
+            {
+                // 1. Kiểm tra file đầu vào
+                if (file == null || file.Length == 0)
+                    return BadRequest("File trống");
 
-        return Ok(new { Url = url });
+                var newFileName = $"{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
+                var mimeType = "image/jpeg";
+
+                using var memoryStream = new MemoryStream();
+
+                // 2. Xử lý ảnh (Resize) bằng ImageSharp
+                using (var image = await Image.LoadAsync(file.OpenReadStream()))
+                {
+                    image.Mutate(x => x.Resize(800, 0)); 
+                    await image.SaveAsJpegAsync(memoryStream);
+                }
+
+                memoryStream.Position = 0; 
+
+                // 3. Gọi Service để upload lên MinIO
+                var url = await _storageService.UploadFileAsync(memoryStream, newFileName, mimeType);
+
+                // 4. Lưu thông tin vào Database
+                var mediaRecord = new MediaFile
+                {
+                    FileName = newFileName,
+                    FileUrl = url,
+                    MimeType = mimeType,
+                    UploadedAt = DateTime.UtcNow
+                };
+
+                _context.MediaFiles.Add(mediaRecord);
+                await _context.SaveChangesAsync();
+
+                return Ok(new
+                {
+                    Id = mediaRecord.Id,
+                    Url = url
+                });
+            }
+            catch (Exception ex)
+            {
+                
+                return StatusCode(500, new
+                {
+                    Message = "Đã xảy ra lỗi trong quá trình xử lý hoặc tải ảnh lên.",
+                    Error = ex.Message
+                });
+            }
+        }
+        [HttpGet]
+        public async Task<IActionResult> GetAll()
+        {
+            try
+            {
+                var files = await _context.MediaFiles
+                    .OrderByDescending(f => f.UploadedAt)
+                    .ToListAsync();
+                return Ok(files);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = "Không thể lấy danh sách ảnh.", Error = ex.Message });
+            }
+        }
     }
 }

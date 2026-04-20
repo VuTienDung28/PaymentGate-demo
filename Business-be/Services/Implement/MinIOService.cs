@@ -4,17 +4,18 @@ using Amazon.Runtime;
 
 namespace Business_be.Services
 {
-    public class MinioService
+    public class MinIOService : IMinIOService
     {
         private readonly IConfiguration _config;
-        public MinioService(IConfiguration config) => _config = config;
+
+        public MinIOService(IConfiguration config) => _config = config;
 
         public async Task<string> UploadFileAsync(Stream fileStream, string fileName, string contentType)
         {
             var config = new AmazonS3Config
             {
                 ServiceURL = $"http://{_config["MinIO:Endpoint"]}",
-                ForcePathStyle = true // Bắt buộc cho MinIO
+                ForcePathStyle = true 
             };
 
             var credentials = new BasicAWSCredentials(_config["MinIO:AccessKey"], _config["MinIO:SecretKey"]);

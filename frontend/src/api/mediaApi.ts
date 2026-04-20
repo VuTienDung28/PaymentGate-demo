@@ -17,4 +17,8 @@ export const mediaApi = {
     })
     return response.data
   },
+  getImages: async () => {
+    const response = await apiClient.get("/Media")
+    return response.data
+  },
 }

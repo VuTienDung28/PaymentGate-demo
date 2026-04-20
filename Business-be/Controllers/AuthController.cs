@@ -1,102 +1,72 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Identity.Data;
+﻿using Business_be.Models;
+using Business_be.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
 
-namespace Business_be.Controllers
+namespace Business_be.Controllers;
+
+[ApiController]
+[Route("api/auth")]
+public class AuthController : ControllerBase
 {
-    [ApiController]
-    [Route("api/auth")]
-    public class AuthController : ControllerBase
+    private readonly IAuthService _authService;
+
+    public AuthController(IAuthService authService)
     {
-        private readonly UserManager<IdentityUser> _userManager;
-        private readonly IConfiguration _config;
+        _authService = authService;
+    }
 
-        public AuthController(UserManager<IdentityUser> userManager, IConfiguration config)
+    [HttpPost("register")]
+    public async Task<IActionResult> Register([FromBody] RegisterRequest request)
+    {
+        try
         {
-            _userManager = userManager;
-            _config = config;
+            var result = await _authService.RegisterAsync(request);
+            if (!result.Succeeded) return BadRequest(result.Errors);
+
+            return Ok(new { message = "Register success" });
         }
-
-        [HttpPost("register")]
-        public async Task<IActionResult> Register([FromBody] RegisterRequest request)
+        catch (Exception ex)
         {
-            var user = new IdentityUser
-            {
-                UserName = request.Email, // Identity bắt buộc phải có UserName
-                Email = request.Email
-            };
-
-            var result = await _userManager.CreateAsync(user, request.Password);
-
-            if (!result.Succeeded)
-            {
-                return BadRequest(result.Errors);
-            }
-
-            // GÁN ROLE 
-            //await _userManager.AddToRoleAsync(user, "User");
-
-            return Ok(new { message = "Register success" }); // Trả về JSON cho FE dễ đọc
+            return StatusCode(500, new { message = "Lỗi hệ thống khi đăng ký.", error = ex.Message });
         }
-        [HttpPost("login")]
-        public async Task<IActionResult> Login([FromBody] LoginRequest request)
+    }
+
+    [HttpPost("login")]
+    public async Task<IActionResult> Login([FromBody] LoginRequest request)
+    {
+        try
         {
-            var user = await _userManager.FindByEmailAsync(request.Email);
-
-            if (user == null || !await _userManager.CheckPasswordAsync(user, request.Password))
-                return Unauthorized(new { message = "Sai tài khoản hoặc mật khẩu!" });
-
-            // 🔥 FIX QUAN TRỌNG
-            var token = await GenerateJwtToken(user);
+            var token = await _authService.LoginAsync(request);
+            if (token == null) return Unauthorized(new { message = "Sai tài khoản hoặc mật khẩu!" });
 
             return Ok(new { token });
         }
-
-        private async Task<string> GenerateJwtToken(IdentityUser user)
+        catch (Exception ex)
         {
-            var userRoles = await _userManager.GetRolesAsync(user);
-
-            var claims = new List<Claim>
-            {
-                new Claim(ClaimTypes.Name, user.UserName),
-                new Claim(ClaimTypes.NameIdentifier, user.Id),
-                new Claim(ClaimTypes.Email, user.Email)
-            };
-
-            foreach (var role in userRoles)
-            {
-                claims.Add(new Claim(ClaimTypes.Role, role));
-            }
-
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["JWT:Key"]));
-            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
-            var token = new JwtSecurityToken(
-                issuer: _config["JWT:Issuer"],
-                audience: _config["JWT:Audience"],
-                claims: claims,
-                expires: DateTime.Now.AddHours(2),
-                signingCredentials: creds
-            );
-
-            return new JwtSecurityTokenHandler().WriteToken(token);
+            return StatusCode(500, new { message = "Lỗi hệ thống khi đăng nhập.", error = ex.Message });
         }
+    }
 
-        [Authorize(Policy = "AdminOnly")]
-        [HttpGet("admin-policy")]
-        public IActionResult AdminPolicy()
+    [Authorize(Policy = "AdminOnly")]
+    [HttpGet("admin-policy")]
+    public IActionResult AdminPolicy()
+    {
+        try
         {
             return Ok("Policy: Admin");
         }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Lỗi hệ thống.", error = ex.Message });
+        }
+    }
 
-        [Authorize(Policy = "User")]
-        [HttpGet("user-policy")]
-        public IActionResult UserPolicy()
+    [Authorize(Policy = "UserOnly")]
+    [HttpGet("user-policy")]
+    public IActionResult UserPolicy()
+    {
+        try
         {
             if (User.IsInRole("Admin"))
             {
@@ -104,17 +74,9 @@ namespace Business_be.Controllers
             }
             return Ok("Policy: User");
         }
-        public class LoginRequest
+        catch (Exception ex)
         {
-            public string Email { get; set; } = string.Empty;
-            public string Password { get; set; } = string.Empty;
-        }
-
-        public class RegisterRequest
-        {
-            public string FullName { get; set; } = string.Empty;
-            public string Email { get; set; } = string.Empty;
-            public string Password { get; set; } = string.Empty;
+            return StatusCode(500, new { message = "Lỗi hệ thống.", error = ex.Message });
         }
     }
 }

@@ -62,7 +62,7 @@ builder.Services.AddAuthorization(options =>
         policy.RequireRole("Admin"));
 
     options.AddPolicy("UserOnly", policy =>
-        policy.RequireRole("User"));
+        policy.RequireRole("User","Admin"));
 });
 
 builder.Services.AddSwaggerGen(options =>
@@ -99,10 +99,10 @@ builder.Services.Configure<IdentityOptions>(options =>
     options.Password.RequireUppercase = false;
 });
 
-builder.Services.AddScoped<MinioService>();
+builder.Services.AddScoped<IMinIOService, MinIOService>();
 
 builder.Services.AddScoped<PaymentService>();
-
+builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
