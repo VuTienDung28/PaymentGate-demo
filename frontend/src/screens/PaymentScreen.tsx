@@ -19,25 +19,28 @@ const COLORS = {
 }
 
 export default function PaymentScreen({ route, navigation }: any) {
-  const { orderCode, totalAmount } = route.params
+  const { orderId, amount, signature } = route.params
   const [isSimulating, setIsSimulating] = useState(false)
 
   // Tạo URL mã QR giả lập (VietQR format)
-  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=PAYMENT_FOR_${orderCode}_AMOUNT_${totalAmount}`
-
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=PAYMENT_FOR_${orderId}_AMOUNT_${amount}`
   const handleSimulatePayment = async () => {
     setIsSimulating(true)
     try {
-      // Giả lập việc Ngân hàng gọi Webhook về Backend của bạn
-      await orderApi.simulateWebhook(orderCode)
+      await orderApi.simulateWebhook(orderId, amount, signature)
 
-      Alert.alert("Thành công", "Backend đã xác nhận thanh toán thành công", [
-        { text: "Về trang chủ", onPress: () => navigation.navigate("Home") },
-      ])
-    } catch (error) {
       Alert.alert(
-        "Lỗi",
-        "Không thể kích hoạt Webhook. Kiểm tra kết nối Backend.",
+        "Thành công",
+        "Backend đã xác thực chữ ký HMAC và xác nhận thanh toán",
+        [{ text: "Về trang chủ", onPress: () => navigation.navigate("Home") }],
+      )
+    } catch (error: any) {
+      // Log lỗi chi tiết để debug
+      console.error("Webhook Error:", error.response?.data || error.message)
+
+      Alert.alert(
+        "Lỗi xác thực",
+        "Chữ ký không hợp lệ hoặc lỗi kết nối. Backend đã từ chối giao dịch này.",
       )
     } finally {
       setIsSimulating(false)
@@ -55,12 +58,10 @@ export default function PaymentScreen({ route, navigation }: any) {
 
       <View style={styles.card}>
         <Text style={styles.label}>Mã đơn hàng:</Text>
-        <Text style={styles.orderCode}>{orderCode}</Text>
+        <Text style={styles.orderCode}>{orderId}</Text>
 
         <Text style={styles.label}>Số tiền cần trả:</Text>
-        <Text style={styles.amount}>
-          {totalAmount.toLocaleString("vi-VN")} đ
-        </Text>
+        <Text style={styles.amount}>{amount.toLocaleString("vi-VN")} đ</Text>
 
         <View style={styles.qrContainer}>
           <Image source={{ uri: qrUrl }} style={styles.qrImage} />

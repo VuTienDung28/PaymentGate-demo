@@ -21,11 +21,14 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Dtos\" />
     <Folder Include="Middelware\" />
     <Folder Include="Config\" />
     <Folder Include="Utils\" />
     <Folder Include="Repositories\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\payment-gateway\payment-gateway.csproj" />
   </ItemGroup>
 
 </Project>

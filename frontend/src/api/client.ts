@@ -1,11 +1,11 @@
 import axios from "axios"
 
 // Đừng quên thay IP này thành IPv4 của máy tính bạn
-const BASE_URL = "http://192.168.0.107:5270/api"
+const BASE_URL = "http://192.168.0.101:5270/api"
 
 const apiClient = axios.create({
   baseURL: BASE_URL,
-  timeout: 60000,
+  timeout: 10000,
   headers: {
     "Content-Type": "application/json",
   },

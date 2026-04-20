@@ -1,4 +1,8 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Business_be.Services;
+using Microsoft.AspNetCore.Mvc;
+using PaymentGateway.Models;
+using Business_be.Dtos;
+
 
 namespace Business_be.Controllers
 {
@@ -6,48 +10,51 @@ namespace Business_be.Controllers
     [ApiController]
     public class OrderController : ControllerBase
     {
+        private readonly PaymentService _paymentService;
 
-        // 1. API Tạo đơn hàng (Mobile App gọi khi bấm "Mua")
+        public OrderController(PaymentService paymentService)
+        {
+            _paymentService = paymentService;
+        }
+
         [HttpPost("checkout")]
         public IActionResult Checkout([FromBody] CheckoutRequest request)
         {
-            // Tạo mã đơn hàng ngẫu nhiên mô phỏng thực tế
-            var orderCode = $"ORD_{DateTime.Now.Ticks}";
+            var orderId = $"ORD_{DateTime.Now.Ticks}";
+            long totalAmount = request.Quantity * 100000; 
 
-            // In log ra Terminal
-            Console.WriteLine($"[BE] Tạo đơn {orderCode}, số lượng: {request.Quantity}, ký HMAC: giả_lập_chữ_ký_123...");
+            // Gọi service để lấy gói tin có chữ ký HMAC thật
+            var paymentData = _paymentService.CreateOrderPayment(orderId, totalAmount);
 
             return Ok(new
             {
-                OrderCode = orderCode,
-                Message = "Tạo đơn thành công, chờ thanh toán."
+                Message = "Khởi tạo thanh toán thành công",
+                Data = paymentData // Trả về cho Mobile gồm cả Signature
             });
         }
 
-        // 2. API Webhook (Nhận thông báo "Đã nhận tiền" từ Cổng thanh toán)
         [HttpPost("payment/callback")]
         public IActionResult PaymentCallback([FromBody] PaymentCallbackRequest request)
         {
-            Console.WriteLine($"[BE] Nhận callback cho đơn {request.OrderCode}");
+            // 1. Giả lập dữ liệu thô để kiểm tra (phải khớp với cách Library băm)
+            
+            string rawData = $"orderId={request.orderId}&amount={request.amount}";
 
-            // (Đổi Status = "PAID" và trừ đi StockQuantity trong bảng Product)
+            // 2. Sử dụng PaymentService để verify chữ ký nhận được
+            
+            bool isValid = _paymentService.ValidateCallback(rawData, request.signature);
+            Console.WriteLine($"[VERIFY] RawData: {rawData}");
+            if (!isValid)
+            {
+                Console.WriteLine($"[BE] ❌ Cảnh báo: Chữ ký không hợp lệ cho đơn {request.orderId}!");
+                return BadRequest(new { Message = "Chữ ký không hợp lệ. Giao dịch bị nghi ngờ giả mạo!" });
+            }
 
-            Console.WriteLine($"[BE] ✅ Đơn {request.OrderCode} cập nhật: PAID");
-
-            return Ok(new { Message = "Xác nhận thanh toán thành công" });
+            // 3. Chỉ khi chữ ký đúng, mới xử lý nghiệp vụ
+            Console.WriteLine($"[BE] ✅ Xác thực thành công đơn {request.orderId}");
+            return Ok(new { Message = "Xác nhận thanh toán thành công qua HMAC" });
         }
     }
 
-    // Các class dùng để hứng dữ liệu (DTO)
-    public class CheckoutRequest
-    {
-        public int ProductId { get; set; }
-        public int Quantity { get; set; }
-    }
-
-    public class PaymentCallbackRequest
-    {
-        public string OrderCode { get; set; } = string.Empty;
-        // Ở thực tế sẽ có thêm mã giao dịch ngân hàng, số tiền, chữ ký xác thực...
-    }
 }
+   

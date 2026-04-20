@@ -101,6 +101,17 @@ builder.Services.Configure<IdentityOptions>(options =>
 
 builder.Services.AddScoped<MinioService>();
 
+builder.Services.AddScoped<PaymentService>();
+
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
 
 var app = builder.Build();
 
@@ -154,6 +165,8 @@ if (app.Environment.IsDevelopment())
 //app.UseHttpsRedirection();
 
 app.UseAuthorization();
+
+app.UseCors();
 
 app.MapControllers();
 

@@ -15,10 +15,16 @@ export const orderApi = {
   },
 
   // 2. Giả lập Webhook (Gọi từ "Ngân hàng" về Backend)
-  simulateWebhook: async (orderCode: string) => {
+  simulateWebhook: async (
+    orderId: string,
+    amount: number,
+    signature: string,
+  ) => {
     try {
       const response = await apiClient.post("/Order/payment/callback", {
-        orderCode: orderCode,
+        orderId: orderId,
+        amount: amount,
+        signature: signature,
       })
       return response.data
     } catch (error) {

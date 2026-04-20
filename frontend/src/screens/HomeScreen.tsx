@@ -99,8 +99,9 @@ export default function HomeScreen({ navigation }: any) {
 
       // CHUYỂN SANG TRANG THANH TOÁN
       navigation.navigate("Payment", {
-        orderCode: response.orderCode,
-        totalAmount: ticketQuantity * TICKET_PRICE,
+        orderId: response.data.orderId,
+        amount: ticketQuantity * TICKET_PRICE,
+        signature: response.data.signature,
       })
     } catch (error) {
       Alert.alert("Lỗi", "Không thể tạo đơn hàng.")
