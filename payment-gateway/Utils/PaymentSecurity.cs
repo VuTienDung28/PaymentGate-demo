@@ -25,7 +25,7 @@ namespace PaymentGateway.Utils
 
         public static bool VerifySignature(string rawData, string signature, string secretKey)
         {
-            // Tính toán lại chữ ký từ dữ liệu thô và so sánh với chữ ký nhận được
+            
             string computedSignature = GenerateHmacSha256(rawData, secretKey);
             return computedSignature.Equals(signature, StringComparison.OrdinalIgnoreCase);
         }

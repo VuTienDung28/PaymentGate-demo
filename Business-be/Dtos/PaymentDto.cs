@@ -9,10 +9,10 @@
     public class PaymentCallbackRequest
 
     {
-        public long amount { get; set; }
-        public string orderId { get; set; } = string.Empty;
-        public string signature { get; set; } = string.Empty;
-        // Ở thực tế sẽ có thêm mã giao dịch ngân hàng, số tiền, chữ ký xác thực...
+        public long Amount { get; set; }
+        public string OrderId { get; set; } = string.Empty;
+        public string Signature { get; set; } = string.Empty;
+        
     }
     
 }

@@ -9,7 +9,7 @@ import {
   Alert,
   ActivityIndicator,
 } from "react-native"
-import { orderApi } from "../api/orderApi"
+import { paymentApi } from "../api/paymentApi"
 
 const COLORS = {
   primary: "#E88B00",
@@ -27,7 +27,7 @@ export default function PaymentScreen({ route, navigation }: any) {
   const handleSimulatePayment = async () => {
     setIsSimulating(true)
     try {
-      await orderApi.simulateWebhook(orderId, amount, signature)
+      await paymentApi.simulateUserPayment(orderId, amount) // báo thành công cho gateway
 
       Alert.alert(
         "Thành công",

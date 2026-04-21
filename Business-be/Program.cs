@@ -100,8 +100,8 @@ builder.Services.Configure<IdentityOptions>(options =>
 });
 
 builder.Services.AddScoped<IMinIOService, MinIOService>();
-
 builder.Services.AddScoped<PaymentService>();
+builder.Services.AddHttpClient<PaymentService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddCors(options =>
 {

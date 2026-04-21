@@ -13,7 +13,7 @@ import {
 } from "react-native"
 import * as ImagePicker from "expo-image-picker"
 import { mediaApi } from "../api/mediaApi"
-import { orderApi } from "../api/orderApi"
+import { paymentApi } from "../api/paymentApi"
 
 const COLORS = {
   primary: "#E88B00",
@@ -122,17 +122,17 @@ export default function HomeScreen({ navigation }: any) {
   const handleCheckout = async () => {
     setIsOrdering(true)
     try {
-      const response = await orderApi.checkout(
+      const response = await paymentApi.checkout(
         selectedMovieIndex + 1,
         ticketQuantity,
-      )
+      ) // tạo đơn hàng
       setModalVisible(false)
 
-      // CHUYỂN SANG TRANG THANH TOÁN
+      // CẬP NHẬT Ở ĐÂY: Lấy qrUrl từ Backend trả về thay vì signature
       navigation.navigate("Payment", {
         orderId: response.data.orderId || response.data.OrderId,
         amount: ticketQuantity * TICKET_PRICE,
-        signature: response.data.signature || response.data.Signature,
+        qrUrl: response.data.qrUrl || response.data.QrUrl,
       })
     } catch (error) {
       Alert.alert("Lỗi", "Không thể tạo đơn hàng.")
